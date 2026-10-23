@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # fastembed (and its pillow<13 pin) is an opt-in extra; CI installs the rest.
+  EXTRAS: "-E s3 -E embeddings -E langgraph"
+
+jobs:
+  lint:
+    name: Lint (ruff + mypy + bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction $EXTRAS
+      - name: ruff check
+        run: poetry run ruff check s3_agent_memory tests examples
+      - name: ruff format --check
+        run: poetry run ruff format --check s3_agent_memory tests examples
+      - name: mypy
+        run: poetry run mypy s3_agent_memory
+      - name: bandit
+        run: poetry run bandit -c pyproject.toml -q -r s3_agent_memory
+
+  audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root $EXTRAS
+      - name: pip-audit
+        run: |
+          # Upgrade pip first so its own advisories don't fail the audit -
+          # pip is tooling, not a shipped dependency.
+          poetry run python -m pip install --upgrade -q pip
+          poetry run pip-audit
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction $EXTRAS
+      - name: Run pytest (moto + filesystem + in-memory backends)
+        run: poetry run pytest -q
+      - name: Examples
+        run: |
+          poetry run python examples/quickstart.py
+          poetry run python examples/langgraph_agent.py
+
+  live-s3:
+    name: Integration (local SeaweedFS S3)
+    runs-on: ubuntu-latest
+    env:
+      S3_AGENT_MEMORY_LIVE_ENDPOINT: http://127.0.0.1:8333
+      S3_AGENT_MEMORY_ENDPOINT_URL: http://127.0.0.1:8333
+      AWS_ACCESS_KEY_ID: local-dev
+      AWS_SECRET_ACCESS_KEY: local-dev-only
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Start SeaweedFS (S3 API on localhost:8333)
+        run: |
+          docker run -d --name seaweedfs -p 127.0.0.1:8333:8333 chrislusf/seaweedfs:latest \
+            mini -dir=/data -bucket=agent-memory -admin.ui=false
+          for i in $(seq 1 60); do
+            curl -fs -o /dev/null http://127.0.0.1:8333/ && exit 0
+            sleep 2
+          done
+          docker logs seaweedfs
+          exit 1
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Install dependencies
+        run: poetry install --no-interaction $EXTRAS
+      - name: Backend + concurrency tests against real S3 conditional writes
+        run: poetry run pytest -q -k s3-live --no-cov
+      - name: Demo script
+        run: poetry run python examples/s3_demo.py
+      - name: CLI against S3
+        run: |
+          poetry run s3-agent-memory remember "CI ran on $(date -u +%F)" --url s3://agent-memory/ci -n ci
+          poetry run s3-agent-memory recall "CI ran" --url s3://agent-memory/ci -n ci
+
+  install:
+    name: Plain pip install (no extras)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install the package alone
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q .
+      - name: Core works without boto3, numpy or langgraph
+        run: |
+          cd /tmp
+          /tmp/venv/bin/python -c "import s3_agent_memory, sys; assert 'numpy' not in sys.modules and 'boto3' not in sys.modules"
+          /tmp/venv/bin/s3-agent-memory remember "plain install works" --url file:///tmp/mem -n smoke
+          /tmp/venv/bin/s3-agent-memory recall "plain install" --url file:///tmp/mem -n smoke
+          /tmp/venv/bin/python $GITHUB_WORKSPACE/examples/quickstart.py

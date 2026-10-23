@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "s3-agent-memory",
+      "args": ["serve", "--url", "file:///home/you/.agent-memory", "--namespace", "users/me"]
+    }
+  }
+}

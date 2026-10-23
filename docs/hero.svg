@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f7b538"/>
+    </marker>
+  </defs>
+  <style>
+    .title { font: 700 60px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #f5f7ff; }
+    .pitch { font: 400 25px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #aab3cc; }
+    .box   { fill: #131a33; stroke: #2a3558; stroke-width: 2; }
+    .acc   { fill: #2a2110; stroke: #f7b538; stroke-width: 2.5; }
+    .lbl   { font: 600 21px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #f5f7ff; }
+    .sub   { font: 400 15px 'SFMono-Regular', Menlo, Consolas, monospace; fill: #8f9bbb; }
+    .code  { font: 600 15px 'SFMono-Regular', Menlo, Consolas, monospace; fill: #f5f7ff; }
+    .key   { font: 500 14px 'SFMono-Regular', Menlo, Consolas, monospace; fill: #f5f7ff; }
+    .hl    { fill: #f7b538; }
+    .line  { stroke: #f7b538; stroke-width: 2.5; fill: none; }
+    .obj   { fill: #0f1630; stroke: #3a4670; stroke-width: 1.5; }
+    .tag   { font: 700 13px 'SFMono-Regular', Menlo, Consolas, monospace; fill: #0b1020; }
+  </style>
+
+  <rect width="1280" height="640" fill="#0b1020"/>
+
+  <text x="80" y="118" class="title">s3-agent-memory</text>
+  <text x="80" y="164" class="pitch">Long-term memory for AI agents as plain objects in S3. No database.</text>
+  <rect x="80" y="188" width="120" height="4" rx="2" fill="#f7b538"/>
+
+  <!-- left: agents -->
+  <rect x="80" y="250" width="240" height="300" rx="16" class="box"/>
+  <text x="104" y="288" class="lbl">your agents</text>
+  <text x="104" y="330" class="code">Claude Code (MCP)</text>
+  <text x="104" y="356" class="code">LangGraph store</text>
+  <text x="104" y="382" class="code">Python API · CLI</text>
+  <text x="104" y="428" class="sub">remember · recall</text>
+  <text x="104" y="450" class="sub">update · forget</text>
+  <text x="104" y="472" class="sub">consolidate</text>
+  <text x="104" y="494" class="sub">export · import</text>
+  <text x="104" y="530" class="sub">one namespace each</text>
+
+  <path d="M320 400 L 376 400" class="line" marker-end="url(#arrow)"/>
+  <text x="326" y="388" class="sub">PUT</text>
+  <text x="326" y="424" class="sub">ETag</text>
+
+  <!-- middle: the bucket -->
+  <rect x="380" y="250" width="500" height="300" rx="16" class="acc"/>
+  <text x="404" y="288" class="lbl">s3://bucket/memories/users/alice/</text>
+
+  <rect x="404" y="306" width="452" height="34" rx="6" class="obj"/>
+  <rect x="412" y="313" width="86" height="20" rx="4" class="hl"/><text x="420" y="328" class="tag">semantic</text>
+  <text x="510" y="328" class="key">01a16b…e4.json  "lives in Lisbon"</text>
+
+  <rect x="404" y="348" width="452" height="34" rx="6" class="obj"/>
+  <rect x="412" y="355" width="86" height="20" rx="4" class="hl"/><text x="420" y="370" class="tag">episodic</text>
+  <text x="510" y="370" class="key">01a16c…9b.json  "asked about Q3"</text>
+
+  <rect x="404" y="390" width="452" height="34" rx="6" class="obj"/>
+  <rect x="412" y="397" width="100" height="20" rx="4" class="hl"/><text x="418" y="412" class="tag">procedural</text>
+  <text x="524" y="412" class="key">01a16d…3c.json  "metric units"</text>
+
+  <rect x="404" y="438" width="216" height="34" rx="6" class="obj"/>
+  <text x="416" y="460" class="key">_index.json  BM25</text>
+  <rect x="632" y="438" width="224" height="34" rx="6" class="obj"/>
+  <text x="644" y="460" class="key">_vectors.npz  local</text>
+
+  <rect x="404" y="480" width="216" height="34" rx="6" class="obj"/>
+  <text x="416" y="502" class="key">_tombstones/</text>
+  <text x="632" y="502" class="sub">AWS S3 · R2 · SeaweedFS</text>
+  <text x="404" y="538" class="sub">optimistic concurrency via ETags · SSE · TTL</text>
+
+  <path d="M880 400 L 936 400" class="line" marker-end="url(#arrow)"/>
+
+  <!-- right: recall -->
+  <rect x="940" y="250" width="260" height="300" rx="16" class="box"/>
+  <text x="964" y="288" class="lbl">recall("units?")</text>
+  <text x="964" y="330" class="code">score =</text>
+  <text x="964" y="356" class="code">+ 0.70 relevance</text>
+  <text x="982" y="380" class="sub">(BM25 + cosine)</text>
+  <text x="964" y="406" class="code">+ 0.15 recency</text>
+  <text x="964" y="432" class="code">+ 0.15 importance</text>
+  <text x="964" y="478" class="sub">returned as data</text>
+  <text x="964" y="500" class="sub">with provenance:</text>
+  <text x="964" y="522" class="sub">key · source · time</text>
+
+  <text x="80" y="600" class="sub">MCP server · LangGraph BaseStore · runs 100% locally · github.com/MartinCastroAlvarez/s3-agent-memory</text>
+</svg>

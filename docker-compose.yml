@@ -1,0 +1,41 @@
+# Local S3-compatible storage for the demo. Nothing here talks to AWS.
+#
+#   docker compose up -d                    # SeaweedFS (default, Apache-2.0)
+#   docker compose --profile minio up -d    # MinIO instead (see note below)
+#   python examples/s3_demo.py
+#
+# Both support S3 conditional writes (If-None-Match / If-Match), which
+# s3-agent-memory relies on for optimistic concurrency.
+#
+# MinIO stopped publishing community binaries and images in October 2025 and
+# archived the repository in 2026. Point MINIO_IMAGE at an image you built from
+# source or mirrored; SeaweedFS is the maintained default.
+
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    command: ["mini", "-dir=/data", "-bucket=agent-memory", "-admin.ui=false"]
+    ports:
+      - "127.0.0.1:8333:8333"   # S3 API, bound to localhost only
+    volumes:
+      - seaweedfs-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8333/"]
+      interval: 5s
+      retries: 20
+
+  minio:
+    profiles: ["minio"]
+    image: ${MINIO_IMAGE:-quay.io/minio/minio:latest}
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-local-dev}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-local-dev-only}
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - minio-data:/data
+
+volumes:
+  seaweedfs-data:
+  minio-data:

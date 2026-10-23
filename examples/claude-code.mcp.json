@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "s3-agent-memory",
+      "args": ["serve", "--url", "s3://agent-memory/claude", "--namespace", "users/me"],
+      "env": {
+        "S3_AGENT_MEMORY_ENDPOINT_URL": "http://localhost:8333",
+        "AWS_PROFILE": "local-dev"
+      }
+    }
+  }
+}
