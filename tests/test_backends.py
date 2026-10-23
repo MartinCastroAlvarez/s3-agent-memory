@@ -168,3 +168,12 @@ def test_open_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, aws_env: 
     for bad in ("s3://key:secret@bucket/x", "s3://bucket/x?endpoint=evil", "ftp://x/y"):
         with pytest.raises(BackendError):
             open_backend(bad)
+
+
+def test_s3_listing_skips_directory_markers(s3_backend: ObjectStore) -> None:
+    from s3_agent_memory.backends.s3 import S3Backend
+
+    assert isinstance(s3_backend, S3Backend)
+    s3_backend._client.put_object(Bucket=BUCKET, Key="ns/_tombstones/", Body=b"")
+    s3_backend.put("ns/_tombstones/a.json", b"{}")
+    assert list(s3_backend.list("ns/_tombstones/", recursive=False)) == ["ns/_tombstones/a.json"]

@@ -77,6 +77,26 @@ def backend(request: pytest.FixtureRequest, tmp_path: Path) -> ObjectStore:
     return result
 
 
+THREADED_BACKENDS = ["memory", "filesystem"] + (["s3-live"] if LIVE_ENDPOINT else [])
+"""Backends for tests that start real threads. moto's in-process mock is not safe under
+concurrent requests (its own ValueErrors), so real-S3 races run against the local
+SeaweedFS server in CI (s3-live); moto still covers the 412 path deterministically."""
+
+
+@pytest.fixture(params=THREADED_BACKENDS)
+def threaded_backend(request: pytest.FixtureRequest, tmp_path: Path) -> ObjectStore:
+    if request.param == "memory":
+        return InMemoryBackend()
+    if request.param == "filesystem":
+        return FilesystemBackend(tmp_path / "store")
+    return _live_backend()
+
+
+@pytest.fixture
+def threaded_store(threaded_backend: ObjectStore) -> MemoryStore:
+    return MemoryStore(threaded_backend, prefix="memories")
+
+
 @pytest.fixture
 def store(backend: ObjectStore) -> MemoryStore:
     return MemoryStore(backend, prefix="memories")

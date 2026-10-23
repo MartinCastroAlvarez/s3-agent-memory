@@ -156,7 +156,12 @@ class S3Backend(ObjectStore):
         keys: list[str] = []
         try:
             for page in paginator.paginate(**kwargs):
-                keys.extend(obj["Key"] for obj in page.get("Contents", []) if "Key" in obj)
+                # Some S3-compatible servers list "directory" markers (keys ending in /).
+                keys.extend(
+                    obj["Key"]
+                    for obj in page.get("Contents", [])
+                    if "Key" in obj and not obj["Key"].endswith("/")
+                )
         except Exception as exc:
             raise BackendError(f"list {prefix}: {_code(exc) or type(exc).__name__}") from exc
         yield from sorted(keys)

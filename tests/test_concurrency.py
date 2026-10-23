@@ -36,39 +36,41 @@ def _parallel(n: int, fn: Callable[[int], object]) -> list[BaseException]:
     return errors
 
 
-def test_concurrent_remember_keeps_every_index_entry(store: MemoryStore) -> None:
-    store.max_retries = 200
-    errors = _parallel(12, lambda i: store.remember(NS, f"fact number {i} about topic{i}"))
+def test_concurrent_remember_keeps_every_index_entry(threaded_store: MemoryStore) -> None:
+    threaded_store.max_retries = 200
+    errors = _parallel(12, lambda i: threaded_store.remember(NS, f"fact number {i} about topic{i}"))
     assert errors == []
-    assert store.stats(NS)["memories"] == 12
+    assert threaded_store.stats(NS)["memories"] == 12
     for i in range(12):
-        assert store.recall(NS, f"topic{i}")[0].memory.content.startswith(f"fact number {i} ")
+        assert threaded_store.recall(NS, f"topic{i}")[0].memory.content.startswith(
+            f"fact number {i} "
+        )
 
 
-def test_concurrent_updates_with_retry_all_land(store: MemoryStore) -> None:
-    store.max_retries = 200
-    m = store.remember(NS, "counter", tags=[])
+def test_concurrent_updates_with_retry_all_land(threaded_store: MemoryStore) -> None:
+    threaded_store.max_retries = 200
+    m = threaded_store.remember(NS, "counter", tags=[])
 
     def bump(i: int) -> None:
-        store.update(NS, m.id, metadata={"writer": i})
+        threaded_store.update(NS, m.id, metadata={"writer": i})
 
     assert _parallel(8, bump) == []
-    final = store.get(NS, m.id)
+    final = threaded_store.get(NS, m.id)
     assert final is not None and final.version == 9
 
 
-def test_expected_version_makes_exactly_one_winner(store: MemoryStore) -> None:
-    m = store.remember(NS, "balance is 10")
+def test_expected_version_makes_exactly_one_winner(threaded_store: MemoryStore) -> None:
+    m = threaded_store.remember(NS, "balance is 10")
     wins: list[int] = []
 
     def write(i: int) -> None:
-        store.update(NS, m.id, content=f"balance is {i}", expected_version=1)
+        threaded_store.update(NS, m.id, content=f"balance is {i}", expected_version=1)
         wins.append(i)
 
     errors = _parallel(6, write)
     assert len(wins) == 1
     assert len(errors) == 5 and all(isinstance(e, ConflictError) for e in errors)
-    final = store.get(NS, m.id)
+    final = threaded_store.get(NS, m.id)
     assert final is not None and final.content == f"balance is {wins[0]}" and final.version == 2
 
 

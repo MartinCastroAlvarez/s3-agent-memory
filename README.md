@@ -253,7 +253,7 @@ credentials. Threat model and reporting: [`SECURITY.md`](SECURITY.md).
 
 ```bash
 python -m venv .venv && . .venv/bin/activate && pip install poetry && poetry install -E s3 -E embeddings -E langgraph
-poetry run pytest                                   # 240 tests, coverage ~97%
+poetry run pytest                                   # 238 tests, coverage ~97%
 poetry run ruff check s3_agent_memory tests examples && poetry run mypy s3_agent_memory
 S3_AGENT_MEMORY_LIVE_ENDPOINT=http://127.0.0.1:8333 poetry run pytest -k s3-live --no-cov   # real local S3
 ```

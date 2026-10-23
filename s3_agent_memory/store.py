@@ -496,6 +496,8 @@ class MemoryStore:
         ns = self._ns(namespace)
         out = []
         for key in self.backend.list(tombstones_dir(self.prefix, ns), recursive=False):
+            if not key.endswith(".json"):
+                continue
             obj = self.backend.get(key, max_bytes=4096)
             if obj is None:
                 continue
